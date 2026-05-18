@@ -1,0 +1,34 @@
+[Unit]
+Description=Batmobile Controller (WebUI + MCP + UDP control loop)
+Documentation=https://github.com/salient-concepts/batmobile-fkm40-controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/srv/batmobile
+Environment=PORT=8000
+Environment=LOG_LEVEL=INFO
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/batmobile/.venv/bin/python -m uvicorn batmobile_service:app --host 0.0.0.0 --port 8000 --log-level info
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGINT
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/batmobile
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

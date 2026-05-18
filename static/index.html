@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>EPOCH · BATMOBILE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Shared SVG defs (gradients, hazard pattern, glyph symbols) used by cockpit toggles -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="leverGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#1a1612"/>
+        <stop offset="50%"  stop-color="#5a534a"/>
+        <stop offset="100%" stop-color="#15110f"/>
+      </linearGradient>
+      <radialGradient id="domeBtn" cx="40%" cy="35%" r="65%">
+        <stop offset="0%"   stop-color="#2a2421"/>
+        <stop offset="60%"  stop-color="#15110f"/>
+        <stop offset="100%" stop-color="#06040a"/>
+      </radialGradient>
+      <radialGradient id="domeBtnLit" cx="40%" cy="35%" r="65%">
+        <stop offset="0%"   stop-color="#ff8888"/>
+        <stop offset="50%"  stop-color="#c41e1e"/>
+        <stop offset="100%" stop-color="#5a0c0c"/>
+      </radialGradient>
+      <radialGradient id="domeBtnFire" cx="40%" cy="35%" r="65%">
+        <stop offset="0%"   stop-color="#ffaaaa"/>
+        <stop offset="50%"  stop-color="#ff2424"/>
+        <stop offset="100%" stop-color="#5a0c0c"/>
+      </radialGradient>
+      <pattern id="hazardPat" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect x="0" y="0" width="7" height="14" fill="#c41e1e"/>
+        <rect x="7" y="0" width="7" height="14" fill="#0a0807"/>
+      </pattern>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 3 L19 6 V12 C19 16 16 19 12 21 C8 19 5 16 5 12 V6 Z"
+              fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M12 8 L14 12 L12 16 L10 12 Z" fill="currentColor"/>
+      </symbol>
+      <symbol id="i-cannon-glyph" viewBox="0 0 24 24">
+        <rect x="9" y="3" width="6" height="11" fill="currentColor"/>
+        <path d="M5 22 L7 14 L17 14 L19 22 Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="i-rivet" viewBox="0 0 8 8">
+        <circle cx="4" cy="4" r="3" fill="currentColor" opacity="0.5"/>
+        <circle cx="3.4" cy="3.2" r="0.9" fill="rgba(255,255,255,0.08)"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div id="app">
+
+    <!-- ===== TOPBAR ===== -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="brand-mark">EPOCH</span>
+        <span class="brand-glyph">▸</span>
+        <span class="brand-sub">BATMOBILE</span>
+      </div>
+
+      <div class="topbar-status">
+        <span class="status-pill mono" id="latencyPill" aria-label="round-trip latency">
+          <span id="latencyVal">--</span>
+        </span>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="fxBtn" class="btn btn-secondary" aria-label="open sound effects panel" aria-expanded="false">
+          <span>FX</span>
+        </button>
+        <button id="demoBtn" class="btn btn-secondary" disabled aria-label="run demo sequence">
+          <span class="demoBtn-text">DEMO</span>
+        </button>
+        <button id="armBtn" class="btn btn-arm" aria-label="arm or disarm">
+          <span class="armBtn-dot"></span>
+          <span class="armBtn-text">ARM</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== SILHOUETTE STAGE ===== -->
+    <section class="stage">
+      <!-- corner crosshair brackets -->
+      <span class="bracket bracket-tl" aria-hidden="true"></span>
+      <span class="bracket bracket-tr" aria-hidden="true"></span>
+      <span class="bracket bracket-bl" aria-hidden="true"></span>
+      <span class="bracket bracket-br" aria-hidden="true"></span>
+
+      <span class="stage-stencil left">VEHICLE STATE</span>
+      <span class="stage-stencil right" id="hudStatus">STANDBY</span>
+
+      <div id="batmobile" class="batmobile">
+        <svg viewBox="0 0 340 580" class="batmobile-svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#fff5b8" stop-opacity="0.95"/>
+              <stop offset="50%"  stop-color="#ffd60a" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#ffd60a" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="lampCone" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%"   stop-color="#fff5b8" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#fff5b8" stop-opacity="0"/>
+            </linearGradient>
+            <!-- Brighter hull so the silhouette pops against the dark bg -->
+            <linearGradient id="hullGrad" x1="35%" y1="0%" x2="65%" y2="100%">
+              <stop offset="0%"   stop-color="#3a3530"/>
+              <stop offset="40%"  stop-color="#2a2520"/>
+              <stop offset="100%" stop-color="#181412"/>
+            </linearGradient>
+            <linearGradient id="panelGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%"   stop-color="#403832"/>
+              <stop offset="100%" stop-color="#1a1612"/>
+            </linearGradient>
+            <linearGradient id="finGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#3c352e"/>
+              <stop offset="60%"  stop-color="#1f1a16"/>
+              <stop offset="100%" stop-color="#0a0807"/>
+            </linearGradient>
+            <radialGradient id="tireRubber" cx="50%" cy="50%" r="55%">
+              <stop offset="0%"   stop-color="#26201c"/>
+              <stop offset="70%"  stop-color="#100c0a"/>
+              <stop offset="100%" stop-color="#000"/>
+            </radialGradient>
+            <radialGradient id="thrusterFire" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#ffaa44" stop-opacity="0.95"/>
+              <stop offset="50%"  stop-color="#c41e1e" stop-opacity="0.7"/>
+              <stop offset="100%" stop-color="#c41e1e" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="thrusterIdle" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#3a2e28"/>
+              <stop offset="100%" stop-color="#0a0807"/>
+            </radialGradient>
+            <radialGradient id="muzzleGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+              <stop offset="25%"  stop-color="#ffaa44" stop-opacity="0.95"/>
+              <stop offset="65%"  stop-color="#c41e1e" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#c41e1e" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Lamp cones projecting forward (LAMPS on) -->
+          <g class="layer layer-lamps">
+            <polygon points="110,42 60,-60 140,-60" fill="url(#lampCone)"/>
+            <polygon points="230,42 200,-60 280,-60" fill="url(#lampCone)"/>
+            <circle cx="110" cy="38" r="32" fill="url(#lampGlow)"/>
+            <circle cx="230" cy="38" r="32" fill="url(#lampGlow)"/>
+          </g>
+
+          <!-- Smoke trail (SMOKE on) — emits from the single center exhaust -->
+          <g class="layer layer-smoke">
+            <circle class="smoke-puff smoke-1" cx="170" cy="572" r="14" fill="rgba(180,180,180,0.55)"/>
+            <circle class="smoke-puff smoke-2" cx="160" cy="582" r="16" fill="rgba(170,170,170,0.5)"/>
+            <circle class="smoke-puff smoke-3" cx="180" cy="582" r="16" fill="rgba(170,170,170,0.5)"/>
+            <circle class="smoke-puff smoke-4" cx="170" cy="592" r="20" fill="rgba(150,150,150,0.4)"/>
+            <circle class="smoke-puff smoke-5" cx="170" cy="600" r="24" fill="rgba(140,140,140,0.32)"/>
+          </g>
+
+          <!-- ===== FRONT WHEELS (smaller, sportscar-style) ===== -->
+          <g class="wheel wheel-fl">
+            <rect x="14" y="115" width="42" height="92" rx="8"
+                  fill="#100c0a" stroke="#5a4a40" stroke-width="1.4"/>
+            <ellipse cx="35" cy="161" rx="15" ry="38" fill="url(#tireRubber)" stroke="#3a2e28" stroke-width="0.8"/>
+            <g stroke="#3a2e28" stroke-width="0.8" opacity="0.85">
+              <line x1="22" y1="130" x2="48" y2="130"/>
+              <line x1="22" y1="148" x2="48" y2="148"/>
+              <line x1="22" y1="166" x2="48" y2="166"/>
+              <line x1="22" y1="184" x2="48" y2="184"/>
+            </g>
+            <circle cx="35" cy="161" r="5" fill="#2a2421" stroke="#5a4a40" stroke-width="0.8"/>
+          </g>
+          <g class="wheel wheel-fr">
+            <rect x="284" y="115" width="42" height="92" rx="8"
+                  fill="#100c0a" stroke="#5a4a40" stroke-width="1.4"/>
+            <ellipse cx="305" cy="161" rx="15" ry="38" fill="url(#tireRubber)" stroke="#3a2e28" stroke-width="0.8"/>
+            <g stroke="#3a2e28" stroke-width="0.8" opacity="0.85">
+              <line x1="292" y1="130" x2="318" y2="130"/>
+              <line x1="292" y1="148" x2="318" y2="148"/>
+              <line x1="292" y1="166" x2="318" y2="166"/>
+              <line x1="292" y1="184" x2="318" y2="184"/>
+            </g>
+            <circle cx="305" cy="161" r="5" fill="#2a2421" stroke="#5a4a40" stroke-width="0.8"/>
+          </g>
+
+          <!-- ===== REAR WHEELS — MASSIVE monster-truck tires ===== -->
+          <g class="wheel wheel-rl">
+            <rect x="0" y="370" width="68" height="170" rx="14"
+                  fill="#100c0a" stroke="#5a4a40" stroke-width="1.6"/>
+            <ellipse cx="34" cy="455" rx="28" ry="74" fill="url(#tireRubber)" stroke="#3a2e28" stroke-width="1"/>
+            <g stroke="#3a2e28" stroke-width="1" opacity="0.9">
+              <line x1="10" y1="390" x2="58" y2="390"/>
+              <line x1="10" y1="412" x2="58" y2="412"/>
+              <line x1="10" y1="434" x2="58" y2="434"/>
+              <line x1="10" y1="456" x2="58" y2="456"/>
+              <line x1="10" y1="478" x2="58" y2="478"/>
+              <line x1="10" y1="500" x2="58" y2="500"/>
+              <line x1="10" y1="522" x2="58" y2="522"/>
+            </g>
+            <!-- Tread chevrons (off-road look) -->
+            <g stroke="#5a4a40" stroke-width="1" opacity="0.6" fill="none">
+              <path d="M 14 405 L 24 412 L 14 419"/>
+              <path d="M 14 449 L 24 456 L 14 463"/>
+              <path d="M 14 493 L 24 500 L 14 507"/>
+              <path d="M 54 405 L 44 412 L 54 419"/>
+              <path d="M 54 449 L 44 456 L 54 463"/>
+              <path d="M 54 493 L 44 500 L 54 507"/>
+            </g>
+            <circle cx="34" cy="455" r="9" fill="#2a2421" stroke="#5a4a40" stroke-width="1"/>
+            <circle cx="34" cy="455" r="3" fill="#0a0807"/>
+          </g>
+          <g class="wheel wheel-rr">
+            <rect x="272" y="370" width="68" height="170" rx="14"
+                  fill="#100c0a" stroke="#5a4a40" stroke-width="1.6"/>
+            <ellipse cx="306" cy="455" rx="28" ry="74" fill="url(#tireRubber)" stroke="#3a2e28" stroke-width="1"/>
+            <g stroke="#3a2e28" stroke-width="1" opacity="0.9">
+              <line x1="282" y1="390" x2="330" y2="390"/>
+              <line x1="282" y1="412" x2="330" y2="412"/>
+              <line x1="282" y1="434" x2="330" y2="434"/>
+              <line x1="282" y1="456" x2="330" y2="456"/>
+              <line x1="282" y1="478" x2="330" y2="478"/>
+              <line x1="282" y1="500" x2="330" y2="500"/>
+              <line x1="282" y1="522" x2="330" y2="522"/>
+            </g>
+            <g stroke="#5a4a40" stroke-width="1" opacity="0.6" fill="none">
+              <path d="M 286 405 L 296 412 L 286 419"/>
+              <path d="M 286 449 L 296 456 L 286 463"/>
+              <path d="M 286 493 L 296 500 L 286 507"/>
+              <path d="M 326 405 L 316 412 L 326 419"/>
+              <path d="M 326 449 L 316 456 L 326 463"/>
+              <path d="M 326 493 L 316 500 L 326 507"/>
+            </g>
+            <circle cx="306" cy="455" r="9" fill="#2a2421" stroke="#5a4a40" stroke-width="1"/>
+            <circle cx="306" cy="455" r="3" fill="#0a0807"/>
+          </g>
+
+          <!-- ===== HULL — narrow front, widest at rear to wrap monster wheels ===== -->
+          <path class="hull-outline"
+                d="M 170 8
+                   L 198 28
+                   L 218 60
+                   L 230 110
+                   L 240 200          /* hood narrowing */
+                   L 252 270          /* into cockpit shoulder */
+                   L 264 340          /* widest cockpit / rear flare begins */
+                   L 274 400          /* rear fender flare around big wheels */
+                   L 280 460
+                   L 274 510
+                   L 252 540
+                   L 220 560
+                   L 188 568
+                   L 152 568
+                   L 120 560
+                   L 88 540
+                   L 66 510
+                   L 60 460
+                   L 66 400
+                   L 76 340
+                   L 88 270
+                   L 100 200
+                   L 110 110
+                   L 122 60
+                   L 142 28 Z"
+                fill="url(#hullGrad)"
+                stroke="#5a4a40"
+                stroke-width="2"/>
+
+          <!-- Subtle highlight stroke on top edges (suggests rim-light) -->
+          <path d="M 170 8 L 198 28 L 218 60 L 230 110"
+                fill="none" stroke="#7a6a5e" stroke-width="1" opacity="0.7"/>
+          <path d="M 170 8 L 142 28 L 122 60 L 110 110"
+                fill="none" stroke="#7a6a5e" stroke-width="1" opacity="0.7"/>
+
+          <!-- Front bumper / chevron grille -->
+          <path d="M 170 22 L 198 32 L 216 60 L 204 80 L 178 70 L 170 78 L 162 70 L 136 80 L 124 60 L 142 32 Z"
+                fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="1"/>
+          <!-- Intake slats inside grille -->
+          <g stroke="#5a4a40" stroke-width="0.8" opacity="0.75">
+            <line x1="146" y1="48" x2="166" y2="56"/>
+            <line x1="146" y1="58" x2="166" y2="66"/>
+            <line x1="194" y1="48" x2="174" y2="56"/>
+            <line x1="194" y1="58" x2="174" y2="66"/>
+          </g>
+          <!-- Center front cannon (multi-barrel cluster) -->
+          <g>
+            <rect x="161" y="0"  width="6" height="32" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.7"/>
+            <rect x="168" y="-2" width="6" height="34" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.7"/>
+            <rect x="175" y="0"  width="6" height="32" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.7"/>
+            <circle cx="171" cy="32" r="6" fill="#2a2421" stroke="#5a4a40" stroke-width="0.8"/>
+          </g>
+
+          <!-- Front lamp recesses (dim by default; bright when LAMPS on) -->
+          <rect class="lamp-bulb" x="96"  y="36" width="28" height="8" rx="2" fill="#2a2421" stroke="#5a4a40" stroke-width="0.7"/>
+          <rect class="lamp-bulb" x="216" y="36" width="28" height="8" rx="2" fill="#2a2421" stroke="#5a4a40" stroke-width="0.7"/>
+
+          <!-- Hood weapon ridges (parallel rails along upper hood) -->
+          <rect x="124" y="90"  width="6" height="120" fill="#1a1612" stroke="#5a4a40" stroke-width="0.7"/>
+          <rect x="210" y="90"  width="6" height="120" fill="#1a1612" stroke="#5a4a40" stroke-width="0.7"/>
+
+          <!-- Side cannons mounted forward of cockpit -->
+          <g class="side-guns">
+            <rect class="gun-l" x="98" y="220" width="9" height="84" rx="1.5"
+                  fill="#1a1612" stroke="#5a4a40" stroke-width="0.8"/>
+            <rect x="92" y="296" width="22" height="26" rx="3"
+                  fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="0.8"/>
+            <rect class="gun-r" x="233" y="220" width="9" height="84" rx="1.5"
+                  fill="#1a1612" stroke="#5a4a40" stroke-width="0.8"/>
+            <rect x="226" y="296" width="22" height="26" rx="3"
+                  fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="0.8"/>
+          </g>
+
+          <!-- ===== HULL SURFACE PANELING ===== -->
+          <g class="hull-detail" stroke="#5a4a40" stroke-width="0.8" fill="none" opacity="0.55">
+            <!-- Center spine chevrons -->
+            <path d="M 170 220 L 138 270 L 170 320 L 202 270 Z"/>
+            <path d="M 170 320 L 140 380 L 170 430 L 200 380 Z"/>
+            <path d="M 170 430 L 148 470 L 170 510 L 192 470 Z"/>
+            <!-- Side panel cuts -->
+            <line x1="80"  y1="280" x2="106" y2="280"/>
+            <line x1="234" y1="280" x2="260" y2="280"/>
+            <line x1="76"  y1="380" x2="100" y2="380"/>
+            <line x1="240" y1="380" x2="264" y2="380"/>
+            <line x1="68"  y1="440" x2="100" y2="440"/>
+            <line x1="240" y1="440" x2="272" y2="440"/>
+            <!-- Diagonal panel edges -->
+            <line x1="100" y1="200" x2="118" y2="220"/>
+            <line x1="240" y1="200" x2="222" y2="220"/>
+          </g>
+
+          <!-- Side armor plates (ARMOR triggered) -->
+          <g class="layer layer-armor">
+            <path class="armor armor-l"
+                  d="M 78 290 Q 64 320 66 380 Q 72 420 88 440 L 92 290 Z"
+                  fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="1"/>
+            <path class="armor armor-r"
+                  d="M 262 290 Q 276 320 274 380 Q 268 420 252 440 L 248 290 Z"
+                  fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="1"/>
+          </g>
+
+          <!-- Cockpit canopy -->
+          <ellipse cx="170" cy="330" rx="42" ry="80" fill="#0a0807" stroke="#5a4a40" stroke-width="1.4"/>
+          <ellipse cx="170" cy="330" rx="34" ry="68" fill="none" stroke="#3a2e28" stroke-width="0.8"/>
+          <line x1="170" y1="252" x2="170" y2="408" stroke="#3a2e28" stroke-width="0.6"/>
+          <path d="M 138 320 Q 170 316 202 320" stroke="#3a2e28" stroke-width="0.6" fill="none"/>
+          <path d="M 138 340 Q 170 344 202 340" stroke="#3a2e28" stroke-width="0.6" fill="none"/>
+
+          <!-- ===== REAR BAT FINS — same shape, pulled further toward center ===== -->
+          <path d="M 123 460
+                   L 113 500
+                   L 73 552
+                   L 63 568
+                   L 95 562
+                   L 131 522 Z"
+                fill="url(#finGrad)" stroke="#5a4a40" stroke-width="1.2"/>
+          <path d="M 217 460
+                   L 227 500
+                   L 267 552
+                   L 277 568
+                   L 245 562
+                   L 209 522 Z"
+                fill="url(#finGrad)" stroke="#5a4a40" stroke-width="1.2"/>
+
+          <!-- ===== CENTER CANNON TURRET (CANNON layer) ===== -->
+          <g class="layer layer-cannon">
+            <rect class="cannon-barrel" x="158" y="218" width="6" height="58" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.8"/>
+            <rect class="cannon-barrel" x="166" y="214" width="8" height="62" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.8"/>
+            <rect class="cannon-barrel" x="176" y="218" width="6" height="58" rx="1" fill="#1a1612" stroke="#5a4a40" stroke-width="0.8"/>
+            <circle class="cannon-base" cx="170" cy="278" r="22" fill="url(#panelGrad)" stroke="#5a4a40" stroke-width="1.2"/>
+            <circle cx="170" cy="278" r="10" fill="#3a2e28"/>
+            <circle cx="170" cy="278" r="3"  fill="#1a1612"/>
+          </g>
+
+          <!-- Muzzle flash (FIRE state) -->
+          <g class="layer layer-fire">
+            <circle cx="102" cy="216" r="14" fill="url(#muzzleGrad)"/>
+            <circle cx="237" cy="216" r="14" fill="url(#muzzleGrad)"/>
+            <circle cx="170" cy="212" r="20" fill="url(#muzzleGrad)"/>
+            <polygon points="102,200 96,218 108,218" fill="#fff" opacity="0.7"/>
+            <polygon points="237,200 231,218 243,218" fill="#fff" opacity="0.7"/>
+            <polygon points="170,194 162,212 178,212" fill="#fff" opacity="0.85"/>
+          </g>
+
+          <!-- ===== REAR EXHAUST — flattened slot, viewed from directly above ===== -->
+          <g class="layer layer-thrusters">
+            <!-- Outer housing slot -->
+            <ellipse class="thruster" cx="170" cy="548" rx="38" ry="13" fill="url(#thrusterIdle)" stroke="#5a4a40" stroke-width="1.8"/>
+            <!-- Stator outline -->
+            <ellipse cx="170" cy="548" rx="30" ry="9" fill="none" stroke="#3a2e28" stroke-width="0.8"/>
+            <!-- Combustion chamber -->
+            <ellipse cx="170" cy="548" rx="22" ry="6" fill="#1a1612" stroke="#3a2e28" stroke-width="1"/>
+            <!-- Heat-shadow core -->
+            <ellipse cx="170" cy="548" rx="11" ry="3" fill="#06040a"/>
+            <!-- Slot dividers (suggests fan blade interior) -->
+            <g stroke="#3a2e28" stroke-width="0.7" opacity="0.7">
+              <line x1="150" y1="548" x2="190" y2="548"/>
+              <line x1="158" y1="544" x2="158" y2="552"/>
+              <line x1="170" y1="544" x2="170" y2="552"/>
+              <line x1="182" y1="544" x2="182" y2="552"/>
+            </g>
+            <!-- Heat halo when reversing — flattened to match the slot -->
+            <ellipse class="thruster-glow" cx="170" cy="548" rx="50" ry="18" fill="url(#thrusterFire)"/>
+          </g>
+
+          <!-- Drive-vector pointer in cockpit -->
+          <g class="drive-vector" transform="translate(170 330)">
+            <line id="vectorLine" x1="0" y1="0" x2="0" y2="-6"
+                  stroke="var(--accent-hi)" stroke-width="2.5" stroke-linecap="round" opacity="0"/>
+            <circle cx="0" cy="0" r="3" fill="var(--accent-hi)" opacity="0" id="vectorDot"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- HUD overlays on the stage -->
+      <div class="stage-hud">
+        <span class="hud-vector" id="vectorState">IDLE</span>
+        <div class="hud-readout">
+          <span><b>THR</b><span id="thrValue">+000</span></span>
+          <span><b>STR</b><span id="strValue">+000</span></span>
+        </div>
+      </div>
+
+      <!-- Telemetry strip docked at bottom of stage -->
+      <div class="stage-strip">
+        <span><b>LINK</b><span id="linkVal">--</span></span>
+        <span><b>RTT</b><span id="rttVal">--</span></span>
+        <span><b>UP</b><span id="missionTimer">00:00:00</span></span>
+        <span><b>CMD</b><span id="cmdCount">000</span></span>
+      </div>
+    </section>
+
+    <!-- ===== COCKPIT CONTROL PANEL ===== -->
+    <section class="effects cockpit-panel">
+      <span class="panel-rivet tl"><svg><use href="#i-rivet"/></svg></span>
+      <span class="panel-rivet tr"><svg><use href="#i-rivet"/></svg></span>
+      <span class="panel-rivet bl"><svg><use href="#i-rivet"/></svg></span>
+      <span class="panel-rivet br"><svg><use href="#i-rivet"/></svg></span>
+
+      <!-- LAMPS toggle switch -->
+      <button class="toggle-sw" data-action="led-toggle" data-state="off" aria-label="lamps toggle">
+        <svg class="sw-graphic" viewBox="0 0 60 100" preserveAspectRatio="xMidYMid meet">
+          <rect x="6" y="6" width="48" height="88" rx="4" fill="#0a0807" stroke="#3a2e28" stroke-width="1.2"/>
+          <rect x="9" y="9" width="42" height="82" rx="3" fill="none" stroke="#1c1614"/>
+          <text x="30" y="22" text-anchor="middle" class="sw-on">ON</text>
+          <text x="30" y="86" text-anchor="middle" class="sw-off">OFF</text>
+          <line x1="14" y1="50" x2="46" y2="50" stroke="#3a2e28" stroke-width="0.6"/>
+          <circle cx="30" cy="50" r="5" fill="#15110f" stroke="#3a2e28" stroke-width="0.8"/>
+          <g class="sw-lever">
+            <rect x="26" y="22" width="8" height="28" rx="2.5" fill="url(#leverGrad)" stroke="#06040a" stroke-width="0.6"/>
+            <circle cx="30" cy="22" r="6.5" fill="#a8a195" stroke="#3a2e28" stroke-width="0.8"/>
+            <circle cx="29" cy="20" r="2" fill="rgba(255,255,255,0.25)"/>
+          </g>
+        </svg>
+        <span class="ctrl-name">LAMPS</span>
+        <span class="ctrl-led"></span>
+      </button>
+
+      <!-- ARMOR pushbutton -->
+      <button class="push-btn" data-action="armor" data-toggle="off" aria-label="armor toggle">
+        <svg class="pb-graphic" viewBox="0 0 80 80" preserveAspectRatio="xMidYMid meet">
+          <polygon points="40,4 72,22 72,58 40,76 8,58 8,22"
+                   fill="#0a0807" stroke="#3a2e28" stroke-width="1.4"/>
+          <polygon points="40,8 68,24 68,56 40,72 12,56 12,24"
+                   fill="none" stroke="#1c1614" stroke-width="0.8"/>
+          <circle cx="40" cy="40" r="24" class="pb-ring" fill="none" stroke="#c41e1e" stroke-width="1.5" opacity="0.45"/>
+          <circle cx="40" cy="40" r="20" class="pb-dome" fill="url(#domeBtn)" stroke="#3a2e28" stroke-width="1"/>
+          <svg x="28" y="28" width="24" height="24" viewBox="0 0 24 24" class="pb-icon"><use href="#i-shield"/></svg>
+        </svg>
+        <span class="ctrl-name">ARMOR</span>
+      </button>
+
+      <!-- FIRE — guarded missile switch (centered, larger) -->
+      <button class="fire-btn" data-action="fire" aria-label="fire">
+        <svg class="fb-graphic" viewBox="0 0 90 110" preserveAspectRatio="xMidYMid meet">
+          <!-- Hinged guard cover at top -->
+          <path d="M 8 16 L 8 4 Q 8 2 12 2 L 78 2 Q 82 2 82 4 L 82 16"
+                fill="#c41e1e" stroke="#5a0c0c" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>
+          <line x1="8" y1="16" x2="82" y2="16" stroke="#5a0c0c" stroke-width="1.6"/>
+          <text x="45" y="11" text-anchor="middle" class="fb-armed">ARMED</text>
+          <!-- Hazard-stripe surround -->
+          <rect x="6" y="18" width="78" height="86" fill="url(#hazardPat)" stroke="#06040a" stroke-width="1"/>
+          <!-- Inner frame -->
+          <rect x="14" y="26" width="62" height="70" fill="#06040a" stroke="#5a0c0c" stroke-width="1.2"/>
+          <!-- The button dome -->
+          <circle cx="45" cy="61" r="22" fill="url(#domeBtnFire)" stroke="#5a0c0c" stroke-width="1.5" class="fb-dome"/>
+          <circle cx="45" cy="61" r="22" fill="none" stroke="#ff2424" stroke-width="1" opacity="0.5" class="fb-glow"/>
+          <text x="45" y="65" text-anchor="middle" class="fb-text">FIRE</text>
+        </svg>
+      </button>
+
+      <!-- CANNON pushbutton -->
+      <button class="push-btn" data-action="gun-up" data-toggle="off" aria-label="cannon raise/lower">
+        <svg class="pb-graphic" viewBox="0 0 80 80" preserveAspectRatio="xMidYMid meet">
+          <polygon points="40,4 72,22 72,58 40,76 8,58 8,22"
+                   fill="#0a0807" stroke="#3a2e28" stroke-width="1.4"/>
+          <polygon points="40,8 68,24 68,56 40,72 12,56 12,24"
+                   fill="none" stroke="#1c1614" stroke-width="0.8"/>
+          <circle cx="40" cy="40" r="24" class="pb-ring" fill="none" stroke="#c41e1e" stroke-width="1.5" opacity="0.45"/>
+          <circle cx="40" cy="40" r="20" class="pb-dome" fill="url(#domeBtn)" stroke="#3a2e28" stroke-width="1"/>
+          <svg x="28" y="28" width="24" height="24" viewBox="0 0 24 24" class="pb-icon"><use href="#i-cannon-glyph"/></svg>
+        </svg>
+        <span class="ctrl-name">CANNON</span>
+      </button>
+
+      <!-- SMOKE toggle switch -->
+      <button class="toggle-sw" data-action="smoke-toggle" data-state="off" aria-label="smoke toggle">
+        <svg class="sw-graphic" viewBox="0 0 60 100" preserveAspectRatio="xMidYMid meet">
+          <rect x="6" y="6" width="48" height="88" rx="4" fill="#0a0807" stroke="#3a2e28" stroke-width="1.2"/>
+          <rect x="9" y="9" width="42" height="82" rx="3" fill="none" stroke="#1c1614"/>
+          <text x="30" y="22" text-anchor="middle" class="sw-on">ON</text>
+          <text x="30" y="86" text-anchor="middle" class="sw-off">OFF</text>
+          <line x1="14" y1="50" x2="46" y2="50" stroke="#3a2e28" stroke-width="0.6"/>
+          <circle cx="30" cy="50" r="5" fill="#15110f" stroke="#3a2e28" stroke-width="0.8"/>
+          <g class="sw-lever">
+            <rect x="26" y="22" width="8" height="28" rx="2.5" fill="url(#leverGrad)" stroke="#06040a" stroke-width="0.6"/>
+            <circle cx="30" cy="22" r="6.5" fill="#a8a195" stroke="#3a2e28" stroke-width="0.8"/>
+            <circle cx="29" cy="20" r="2" fill="rgba(255,255,255,0.25)"/>
+          </g>
+        </svg>
+        <span class="ctrl-name">SMOKE</span>
+        <span class="ctrl-led"></span>
+      </button>
+    </section>
+
+    <!-- ===== STICKS + ABORT ===== -->
+    <section class="sticks">
+      <div class="stick" id="leftStick">
+        <div class="ring"></div>
+        <div class="knob"></div>
+        <div class="stick-label">PROPULSION</div>
+      </div>
+
+      <button id="estop" class="abort-stop" aria-label="hold to abort and full stop">
+        <svg viewBox="0 0 140 140" class="abort-svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="abortDome" cx="40%" cy="32%" r="68%">
+              <stop offset="0%"  stop-color="#3a1414"/>
+              <stop offset="55%" stop-color="#15100e"/>
+              <stop offset="100%" stop-color="#06040a"/>
+            </radialGradient>
+            <radialGradient id="abortDomeLit" cx="40%" cy="32%" r="68%">
+              <stop offset="0%"  stop-color="#ff9090"/>
+              <stop offset="55%" stop-color="#c41e1e"/>
+              <stop offset="100%" stop-color="#5a0c0c"/>
+            </radialGradient>
+            <pattern id="abortHazard" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect x="0" y="0" width="5" height="10" fill="#5a0c0c"/>
+              <rect x="5" y="0" width="5" height="10" fill="#0a0807"/>
+            </pattern>
+          </defs>
+
+          <polygon points="70,4 122,34 122,106 70,136 18,106 18,34"
+                   fill="#0a0807" stroke="#3a2e28" stroke-width="1.4"/>
+          <polygon points="70,8 118,36 118,104 70,132 22,104 22,36"
+                   fill="none" stroke="#1c1614" stroke-width="0.8"/>
+
+          <circle cx="70" cy="70" r="60" fill="url(#abortHazard)" opacity="0.55"/>
+          <circle cx="70" cy="70" r="60" fill="none" stroke="#1c1614" stroke-width="0.6"/>
+
+          <circle cx="70" cy="70" r="54" fill="#06040a" stroke="#3a2e28" stroke-width="1.5"/>
+
+          <circle class="abort-progress" cx="70" cy="70" r="54"
+                  fill="none" stroke="var(--accent-hi)" stroke-width="3.5"
+                  stroke-dasharray="339.292" stroke-dashoffset="339.292"
+                  stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+
+          <circle class="abort-dome" cx="70" cy="70" r="44"
+                  fill="url(#abortDome)" stroke="var(--accent)" stroke-width="1.6"/>
+          <circle class="abort-dome-glow" cx="70" cy="70" r="44"
+                  fill="none" stroke="var(--accent-hi)" stroke-width="1" opacity="0.4"/>
+
+          <g class="abort-x">
+            <line x1="55" y1="55" x2="85" y2="85" stroke="var(--accent-hi)" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="85" y1="55" x2="55" y2="85" stroke="var(--accent-hi)" stroke-width="4.5" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <span class="abort-label">HOLD TO ABORT</span>
+      </button>
+
+      <div class="stick" id="rightStick">
+        <div class="ring"></div>
+        <div class="knob"></div>
+        <div class="stick-label">VECTOR</div>
+      </div>
+    </section>
+
+    <!-- TOP-anchored drawers (slide down from under the icons) -->
+    <div id="fxPanel" class="drawer hidden">
+      <div class="drawer-header">
+        <span class="drawer-title">SOUND FX</span>
+        <button id="fxClose" class="drawer-close" aria-label="Close">×</button>
+      </div>
+      <div class="sound-grid" id="soundList"></div>
+    </div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

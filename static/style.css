@@ -1,0 +1,950 @@
+/* =============================================================
+   EPOCH · BATMOBILE — Pattinson Batman aesthetic, vehicle-as-UI
+   ============================================================= */
+
+:root {
+  --bg:           #06080c;
+  --bg-soft:      #0c1018;
+  --bg-card:      #131820;
+  --bg-elev:      #1a2030;
+  --border:       #232a36;
+  --border-hi:    #313a48;
+  --border-active:#465062;
+
+  --text:         #ffffff;          /* pure white primary */
+  --text-dim:     #d8dae0;          /* bright cool grey */
+  --text-muted:   #98a0ac;
+
+  --accent:       #c41e1e;          /* crimson stays for danger/armed/fire */
+  --accent-hi:    #ff3838;
+  --accent-dim:   #c41e1e;
+  --accent-glow:  rgba(196, 30, 30, 0.45);
+
+  /* Amber Gotham label color — used for all routine readouts (LINK / RTT / BAT
+     / labels) so they pop against the dark bg without competing with crimson
+     danger states. */
+  --label:        #ffb547;
+  --label-hi:     #ffc97a;
+
+  --good:         #1de9b6;          /* armed indicator — cool teal pop */
+  --danger:       #ff2424;
+  --danger-glow:  rgba(255, 36, 36, 0.55);
+
+  --fs-xs:    12px;
+  --fs-sm:    14px;
+  --fs-base:  16px;
+  --fs-md:    18px;
+  --fs-lg:    24px;
+  --fs-xl:    34px;
+
+  --pad-1: 4px;
+  --pad-2: 8px;
+  --pad-3: 14px;
+  --pad-4: 22px;
+  --pad-5: 32px;
+
+  --stick-size: clamp(140px, 34vw, 200px);
+  --knob-size:  clamp(50px, 12vw, 80px);
+
+  --touch-min: clamp(44px, 6vmin, 56px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  height: 100dvh; width: 100vw;
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+  touch-action: manipulation;
+  background-image:
+    radial-gradient(ellipse at 50% 110%, rgba(196,30,30,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% -10%, rgba(196,30,30,0.04) 0%, transparent 50%),
+    var(--bg);
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+/* Vignette only — no grain (was eating small-text crispness). Soft. */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 9991;
+  background: radial-gradient(ellipse at center, transparent 70%, rgba(0,0,0,0.45) 100%);
+}
+
+#app {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  height: 100dvh; width: 100vw;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* =============================================================
+   TOPBAR
+   ============================================================= */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--pad-3);
+  padding: var(--pad-2) var(--pad-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 50;
+}
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: var(--fs-md);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.topbar-brand .brand-mark { color: var(--text); }
+.topbar-brand .brand-glyph { color: var(--accent); }
+.topbar-brand .brand-sub {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: var(--text-dim);
+}
+
+.topbar-status {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--pad-2);
+  min-width: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.status-pill.mono { letter-spacing: 0; color: var(--label); }
+.status-pill .status-dot {
+  width: 6px; height: 6px;
+  background: var(--text-muted);
+  border-radius: 50%;
+}
+.status-pill.armed {
+  color: var(--good);
+  border-color: var(--good);
+  background: rgba(29,233,182,0.08);
+}
+.status-pill.armed .status-dot {
+  background: var(--good);
+  box-shadow: 0 0 10px rgba(29,233,182,0.7);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.5; transform: scale(0.7); }
+}
+
+.topbar-actions {
+  display: flex;
+  gap: var(--pad-2);
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  height: var(--touch-min);
+  padding: 0 var(--pad-3);
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: var(--fs-sm);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.btn:hover { border-color: var(--text-dim); }
+
+.btn-secondary { color: var(--text-dim); }
+.btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; border-color: var(--border); }
+.btn-secondary.running {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  animation: running-pulse 1.4s ease-in-out infinite;
+}
+@keyframes running-pulse {
+  0%,100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%     { box-shadow: 0 0 12px 4px var(--accent-glow); }
+}
+
+.btn-arm {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-arm:hover { background: rgba(196,30,30,0.1); }
+.btn-arm.armed {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+/* Live indicator dot inside the ARM button — only visible when armed */
+.armBtn-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.btn-arm.armed .armBtn-dot {
+  opacity: 1;
+  background: #000;
+  box-shadow: 0 0 6px rgba(0,0,0,0.6);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.ico {
+  position: relative;
+  width: var(--touch-min); height: var(--touch-min);
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--text-dim);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.ico:hover { color: var(--accent-hi); border-color: var(--accent-dim); }
+.ico.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ico svg { width: 60%; height: 60%; }
+.ico .badge {
+  position: absolute;
+  top: -1px; right: -1px;
+  min-width: 16px; height: 16px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  letter-spacing: 0;
+}
+.ico .badge[hidden] { display: none; }
+
+/* =============================================================
+   STAGE — the centerpiece. Live Batmobile silhouette.
+   ============================================================= */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad-3);
+  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.batmobile {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s cubic-bezier(0.3, 0, 0.2, 1);
+  filter: drop-shadow(0 0 18px rgba(0,0,0,0.6));
+}
+
+.batmobile-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+/* --- Layered state visuals ----------------------------------- */
+
+/* Hidden by default; opacity flips when state classes apply */
+.layer-lamps,
+.layer-cannon,
+.layer-fire {
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.layer-smoke .smoke-puff {
+  opacity: 0;
+}
+.layer-thrusters .thruster-glow {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* LAMPS */
+.batmobile.lamps-on .layer-lamps { opacity: 1; }
+.batmobile.lamps-on .lamp-bulb {
+  fill: #fff5b8;
+  filter: drop-shadow(0 0 6px #ffd60a);
+}
+
+/* SMOKE — visualized as a red exhaust glow + slow pulse (no fake puff trail) */
+.layer-smoke { display: none; }
+.batmobile.smoke-on .thruster-glow {
+  animation: smoke-pulse 1.8s ease-in-out infinite;
+}
+@keyframes smoke-pulse {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+
+/* ARMOR — side plates rotate outward from their inner-top hinge */
+.armor {
+  transition: transform 0.45s cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+.armor.armor-l { transform-origin: 90px 290px; }
+.armor.armor-r { transform-origin: 250px 290px; }
+.batmobile.armor-open .armor.armor-l { transform: translate(-26px, 8px) rotate(-34deg); }
+.batmobile.armor-open .armor.armor-r { transform: translate( 26px, 8px) rotate( 34deg); }
+
+/* CANNON — turret rises out of cockpit area */
+.layer-cannon { transform-origin: 170px 278px; transition: opacity 0.3s, transform 0.4s cubic-bezier(0.3, 1.2, 0.5, 1); transform: translateY(10px) scale(0.85); }
+.batmobile.cannon-up .layer-cannon { opacity: 1; transform: translateY(-4px) scale(1); }
+
+/* FIRE — brief flash */
+.batmobile.fire-flash .layer-fire { opacity: 1; }
+.batmobile.fire-flash .layer-cannon { transform: translateY(0) scale(1.04); }
+@keyframes fire-recoil {
+  0%   { transform: translateY(-4px); }
+  20%  { transform: translateY( 2px); }
+  100% { transform: translateY(-4px); }
+}
+.batmobile.fire-flash {
+  animation: fire-recoil 0.25s ease-out;
+}
+
+/* Thruster glow when reverse-throttle is active OR smoke is on */
+.batmobile.reversing .thruster-glow,
+.batmobile.smoke-on  .thruster-glow { opacity: 1; }
+
+/* Drive vector pointer in cockpit */
+#vectorLine, #vectorDot {
+  transition: opacity 0.15s ease, y2 0.05s linear;
+}
+
+/* Decorative corner brackets framing the stage */
+.bracket {
+  position: absolute;
+  width: 22px; height: 22px;
+  border: 1px solid var(--accent-dim);
+  z-index: 2;
+  pointer-events: none;
+}
+.bracket-tl { top: 8px;    left: 8px;  border-right: 0; border-bottom: 0; }
+.bracket-tr { top: 8px;    right: 8px; border-left: 0;  border-bottom: 0; }
+.bracket-bl { bottom: 8px; left: 8px;  border-right: 0; border-top: 0; }
+.bracket-br { bottom: 8px; right: 8px; border-left: 0;  border-top: 0; }
+
+/* Stencil labels in stage corners */
+.stage-stencil {
+  position: absolute;
+  top: 18px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: var(--label);
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+  z-index: 3;
+  pointer-events: none;
+}
+.stage-stencil.left  { left: 24px; }
+.stage-stencil.right { right: 24px; color: var(--accent-hi); }
+
+/* HUD overlay text floating over the silhouette */
+.stage-hud {
+  position: absolute;
+  left: 24px;
+  bottom: 60px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad-2);
+  pointer-events: none;
+}
+.hud-vector {
+  font-size: clamp(40px, 8vmin, 84px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+  color: var(--text);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+  text-shadow: 0 0 18px rgba(0,0,0,0.7);
+}
+.hud-vector.idle { color: var(--text-muted); }
+.hud-vector.fwd  { color: var(--text); }
+.hud-vector.rev  { color: var(--accent-hi); }
+.hud-readout {
+  display: flex;
+  gap: var(--pad-3);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.hud-readout > span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.hud-readout b {
+  color: var(--label);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+}
+.hud-readout > span > span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Telemetry strip pinned to bottom of stage */
+.stage-strip {
+  position: absolute;
+  left: 0; right: 0; bottom: 8px;
+  display: flex;
+  justify-content: center;
+  gap: var(--pad-4);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  z-index: 3;
+  padding: 0 var(--pad-3);
+  pointer-events: none;
+}
+.stage-strip > span { display: inline-flex; gap: 6px; align-items: baseline; }
+.stage-strip b {
+  color: var(--label);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+.stage-strip > span > span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* =============================================================
+   COCKPIT CONTROL PANEL — riveted strip with physical-style controls
+   (LAMPS/SMOKE lever switches, ARMOR/CANNON dome buttons, FIRE guarded)
+   ============================================================= */
+.effects.cockpit-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  gap: var(--pad-3);
+  padding: var(--pad-3) var(--pad-3);
+  background: transparent;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-rivet { display: none; }
+
+.ctrl-name {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--label);
+  line-height: 1;
+  margin-top: 2px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.8);
+}
+
+/* ---- TOGGLE SWITCH (LAMPS / SMOKE) ---------------------------- */
+.toggle-sw {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.sw-graphic {
+  width: 100%;
+  max-width: clamp(38px, 7vmin, 54px);
+  aspect-ratio: 60 / 100;
+  height: auto;
+}
+.sw-on, .sw-off {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  fill: var(--text-muted);
+}
+.toggle-sw[data-state="on"] .sw-on   { fill: var(--accent-hi); filter: drop-shadow(0 0 3px var(--accent-glow)); }
+.toggle-sw[data-state="off"] .sw-off { fill: var(--text-dim); }
+
+.sw-lever {
+  transform-origin: 30px 50px;
+  transition: transform 0.22s cubic-bezier(0.4, 1.4, 0.55, 0.95);
+}
+.toggle-sw[data-state="off"] .sw-lever { transform: rotate(180deg); }
+.toggle-sw[data-state="on"]  .sw-lever { transform: rotate(0deg); }
+
+.toggle-sw .ctrl-led {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  box-shadow: inset 0 0 2px rgba(0,0,0,0.6);
+}
+.toggle-sw[data-state="on"] .ctrl-led {
+  background: var(--accent-hi);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+.toggle-sw:active .sw-graphic { transform: scale(0.97); }
+
+/* ---- HEX DOME PUSHBUTTON (ARMOR / CANNON) -------------------- */
+.push-btn {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.pb-graphic {
+  width: 100%;
+  max-width: clamp(44px, 8vmin, 62px);
+  aspect-ratio: 1;
+  height: auto;
+}
+.pb-icon {
+  color: var(--accent-hi);
+  pointer-events: none;
+  transition: color 0.12s ease;
+}
+.pb-dome { transition: fill 0.18s ease; }
+.pb-ring { transition: opacity 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease; }
+
+.push-btn:active .pb-dome { fill: url(#domeBtnLit); }
+.push-btn:active .pb-icon { color: #fff; }
+.push-btn:active .pb-ring { opacity: 1; stroke-width: 2.5; }
+.push-btn:active .pb-graphic { transform: scale(0.97); }
+
+/* Toggled-on state for ARMOR/CANNON (driven by data-toggle="on") */
+.push-btn[data-toggle="on"] .pb-dome { fill: url(#domeBtnLit); }
+.push-btn[data-toggle="on"] .pb-icon { color: #fff; }
+.push-btn[data-toggle="on"] .pb-ring {
+  opacity: 1;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* ---- GUARDED FIRE BUTTON ------------------------------------- */
+.fire-btn {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.fb-graphic {
+  width: 100%;
+  max-width: clamp(56px, 10vmin, 78px);
+  aspect-ratio: 90 / 110;
+  height: auto;
+  filter: drop-shadow(0 0 8px rgba(196,30,30,0.3));
+}
+.fb-armed {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  fill: #fff;
+}
+.fb-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  fill: #fff;
+  text-shadow: 0 0 4px #000;
+}
+.fb-glow { animation: fb-glow 1.6s ease-in-out infinite; }
+@keyframes fb-glow {
+  0%, 100% { opacity: 0.35; stroke-width: 1; }
+  50%      { opacity: 0.85; stroke-width: 2; }
+}
+.fire-btn:active .fb-graphic {
+  transform: scale(0.97);
+  filter: drop-shadow(0 0 18px var(--danger-glow));
+}
+.fire-btn:active .fb-dome { fill: #fff; }
+.fire-btn:active .fb-text { fill: var(--accent-hi); }
+
+/* =============================================================
+   STICKS
+   ============================================================= */
+.sticks {
+  display: flex;
+  justify-content: space-around;
+  align-items: end;
+  padding: var(--pad-3) var(--pad-3) calc(var(--pad-4) + 16px);
+  gap: var(--pad-3);
+  flex-shrink: 0;
+}
+.stick {
+  position: relative;
+  width: var(--stick-size);
+  height: var(--stick-size);
+  touch-action: none;
+}
+.ring {
+  position: absolute; inset: 0;
+  border: 1px solid var(--border-active);
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--bg-elev) 0%, var(--bg-soft) 70%, var(--bg) 100%);
+  box-shadow: inset 0 0 24px rgba(0,0,0,0.6);
+}
+.ring::before, .ring::after {
+  content: '';
+  position: absolute;
+  background: var(--border-hi);
+}
+.ring::before { left: 50%; top: 8%; bottom: 8%; width: 1px; transform: translateX(-50%); }
+.ring::after  { top: 50%; left: 8%; right: 8%; height: 1px; transform: translateY(-50%); }
+.knob {
+  position: absolute;
+  width: var(--knob-size); height: var(--knob-size);
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2a2421 0%, #100c0a 100%);
+  border: 1px solid var(--text-dim);
+  box-shadow:
+    inset 0 0 8px rgba(0,0,0,0.6),
+    0 2px 8px rgba(0,0,0,0.6);
+  pointer-events: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.knob::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, rgba(230,224,212,0.18) 0%, transparent 60%);
+}
+.stick.parked .knob {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 10px rgba(196,30,30,0.4),
+    0 0 16px var(--accent-glow);
+}
+.stick-label {
+  position: absolute;
+  bottom: calc(-1em - 6px);
+  left: 0; right: 0;
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: var(--label);
+  pointer-events: none;
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+}
+
+/* =============================================================
+   ABORT
+   ============================================================= */
+.bottombar {
+  padding: var(--pad-3);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* Industrial E-stop dome — circular hex bezel with a crimson dome.
+   Press and hold ~700 ms; the outer ring fills clockwise. Same on phone + desktop. */
+.abort-stop {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  touch-action: none;
+}
+.abort-svg {
+  width: 88px;
+  height: 88px;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(196,30,30,0.25));
+  transition: filter 0.2s, transform 0.1s;
+}
+.abort-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  color: var(--label);
+  transition: color 0.15s;
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+}
+
+/* Progress ring — circumference = 2π × 54 ≈ 339.292 */
+.abort-progress {
+  transition: stroke-dashoffset 0.08s ease-out;
+}
+.abort-stop.holding .abort-progress {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.7s linear;
+}
+
+/* Hold state: dome lifts to lit gradient, X turns white, label glows */
+.abort-stop.holding .abort-dome { fill: url(#abortDomeLit); }
+.abort-stop.holding .abort-x line { stroke: #fff; }
+.abort-stop.holding .abort-svg {
+  filter: drop-shadow(0 0 22px var(--accent-glow));
+  transform: scale(0.97);
+}
+.abort-stop.holding .abort-label { color: var(--accent-hi); }
+.abort-stop.holding .abort-dome-glow {
+  opacity: 1;
+  animation: abort-pulse 0.7s ease-in-out infinite;
+}
+@keyframes abort-pulse {
+  0%,100% { stroke-width: 1; opacity: 0.4; }
+  50%     { stroke-width: 3; opacity: 0.9; }
+}
+
+/* Fired flash — confirms abort actually triggered */
+.abort-stop.fired .abort-dome { fill: #fff; }
+.abort-stop.fired .abort-x line { stroke: var(--accent); }
+.abort-stop.fired .abort-svg {
+  filter: drop-shadow(0 0 36px var(--danger-glow));
+}
+
+/* Idle hover — subtle warm-up */
+.abort-stop:hover .abort-svg { filter: drop-shadow(0 0 16px rgba(196,30,30,0.45)); }
+.abort-stop:hover .abort-label { color: var(--accent-hi); }
+
+/* =============================================================
+   DRAWERS — slide DOWN from under the topbar
+   ============================================================= */
+.drawer {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  max-height: 60dvh;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--accent-dim);
+  display: flex; flex-direction: column;
+  z-index: 40;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+  padding-top: env(safe-area-inset-top);
+  /* Land just below the topbar (~58px). Use fallback transforms for older browsers. */
+  transform: translateY(54px);
+}
+.drawer.hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+@media (min-width: 900px) {
+  .drawer {
+    left: auto; right: var(--pad-3);
+    top: 60px;
+    width: min(560px, 50vw);
+    border: 1px solid var(--accent-dim);
+    transform: translateY(0);
+  }
+  .drawer.hidden {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--pad-3) var(--pad-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.drawer-title {
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: var(--accent-hi);
+  font-size: var(--fs-sm);
+}
+.drawer-close {
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+}
+.drawer-close:hover { border-color: var(--accent); color: var(--accent); }
+
+.sound-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
+  gap: var(--pad-2);
+  padding: var(--pad-3);
+  overflow-y: auto;
+}
+.sound {
+  border: 1px solid var(--border-hi);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  padding: var(--pad-3);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: var(--fs-sm);
+  min-height: var(--touch-min);
+  text-align: center;
+}
+.sound:hover { border-color: var(--accent-dim); color: var(--text); }
+.sound:active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.log-list {
+  list-style: none;
+  margin: 0; padding: 0;
+  overflow-y: auto;
+}
+.log-list li {
+  display: flex;
+  gap: var(--pad-3);
+  padding: var(--pad-2) var(--pad-4);
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--border);
+}
+.log-list .t   { color: var(--text-dim); width: 8ch; flex-shrink: 0; }
+.log-list .src { color: var(--accent-hi); width: 5ch; flex-shrink: 0; text-transform: uppercase; }
+.log-list .act { color: var(--text); flex: 1; word-break: break-word; }
+
+/* =============================================================
+   SHARED
+   ============================================================= */
+.toggle-sw.flash, .push-btn.flash, .fire-btn.flash, .sound.flash, .btn-arm.flash, .ico.flash {
+  animation: btn-flash 0.45s ease-out;
+}
+@keyframes btn-flash {
+  0%   { box-shadow: 0 0 0 2px var(--accent), 0 0 16px var(--accent-glow); }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; }
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* =============================================================
+   RESPONSIVE
+   ============================================================= */
+/* Phone: just bump physical sizes of tiny text. Colors handled by base palette. */
+@media (max-width: 720px) {
+  body::after { background: radial-gradient(ellipse at center, transparent 75%, rgba(0,0,0,0.35) 100%); }
+
+  .stage-strip   { font-size: 12px; letter-spacing: 0.16em; }
+  .ctrl-name     { font-size: 11px; }
+  .stick-label   { font-size: 12px; }
+  .status-pill   { font-size: 12px; }
+  .abort-label   { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    flex-wrap: wrap;
+    row-gap: var(--pad-2);
+  }
+  .topbar-brand { font-size: var(--fs-base); }
+  .topbar-brand .brand-sub { display: none; }
+  .topbar-status { order: 3; flex: 1 0 100%; }
+  .effects.cockpit-panel {
+    gap: var(--pad-2);
+    padding: var(--pad-2) var(--pad-3);
+  }
+  .stage-stencil { display: none; }
+  .stage-hud { left: 14px; bottom: 50px; }
+  .stage-strip { gap: var(--pad-3); font-size: 10px; }
+  .drawer { transform: translateY(110px); }  /* under wrapped topbar */
+}
+
+@media (min-width: 900px) {
+  :root {
+    --fs-base: 16px;
+    --stick-size: clamp(180px, 22vmin, 280px);
+    --knob-size:  clamp(70px, 9vmin, 110px);
+  }
+  #app { max-width: 1600px; margin: 0 auto; }
+  .stage { padding: var(--pad-5) var(--pad-4); }
+  .batmobile { max-width: 420px; }
+  .stage-hud { left: 48px; bottom: 80px; }
+  .hud-vector { font-size: clamp(64px, 9vmin, 128px); }
+  .effects.cockpit-panel { padding: var(--pad-4) var(--pad-5); gap: var(--pad-4); }
+  .sticks { padding: var(--pad-4) var(--pad-5) var(--pad-5); gap: var(--pad-5); }
+}
+
+@media (min-width: 1300px) {
+  body::before { display: none; }
+  :root {
+    --stick-size: clamp(220px, 24vmin, 320px);
+    --knob-size:  clamp(86px, 10vmin, 130px);
+  }
+  .batmobile { max-width: 480px; }
+  .hud-vector { font-size: clamp(80px, 10vmin, 156px); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
